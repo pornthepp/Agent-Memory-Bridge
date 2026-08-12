@@ -1,6 +1,7 @@
-# AI Project Memory Universal v1.1
+# Agent Memory Bridge
 
 ระบบ Project Memory (ความจำโปรเจ็กต์) แบบใช้ร่วมกันสำหรับ **Codex + Claude Code**
+(เดิมชื่อ AI Project Memory Universal v1.1 — core เดียวกัน แค่เปลี่ยนชื่อโปรเจ็ค)
 
 ## แนวคิด
 

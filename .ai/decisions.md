@@ -38,3 +38,17 @@ User proposed instead telling the agent in CLAUDE.md/AGENTS.md to manually flag 
 after Bash writes. Rejected per D-002: that reintroduces dependence on the model
 remembering. Detection stays hook-side (mechanical), even though the regex approach is
 best-effort, not a full shell parser — see README "ข้อจำกัด v1.1".
+
+---
+
+## D-004 — Project named "Agent Memory Bridge"
+
+**Status:** Accepted
+
+**Decision:**
+Rename the project (was "AI Project Memory Universal") to **Agent Memory Bridge**.
+GitHub remote already uses this name: `github.com/pornthepp/Agent-Memory-Bridge`.
+
+**Reason:**
+User picked it from suggested names; reflects what the tool actually does — bridges
+project memory across agents (Codex ↔ Claude Code) and across sessions.
