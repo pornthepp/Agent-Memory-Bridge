@@ -31,14 +31,17 @@ v1.1 change-detection hardening.
       (`.dirty` checked right after `git commit`, which never clears it — only the Stop
       hook does); ran `checkpoint_guard.py` directly and confirmed it clears normally
       (2026-08-12)
+- [x] Updated README.md "Project change detection" + "ข้อจำกัด v1.1" to match the real
+      shlex/heredoc/git-skip implementation, with the honest 2-confirmed-bugs framing
+      (2026-08-12)
 
 ## Current Tasks
-- [ ] Update README.md "ข้อจำกัด v1.1" for the current shlex/heredoc/git-skip behavior
 - [ ] Decide whether the git-commit-with-memory rule should stay convention-only or
       become hook-enforced
 - [ ] Clean up scratch test folder (user said they'd do it later)
+- [ ] Consider adding `merge`/`pull`/`rebase` handling (not in the safe list, not
+      pattern-scanned specially either — noted as a known gap, not urgent)
 
 ## Next Milestone
-README limitations section matches the real implementation. Bash write-detection can be
-considered settled for now — 2 confirmed regex bugs fixed via shlex, plus reasonable
-proactive hardening on top.
+Bash write-detection is settled for now: 2 confirmed regex bugs fixed via shlex, plus
+documented proactive hardening. No blocking work left on this thread.

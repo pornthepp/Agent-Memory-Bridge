@@ -12,22 +12,15 @@ v1.1 change-detection hardening, now under its real name.
 - Guidance tells agents to commit `.ai/*.md` together with code (not hook-enforced).
 
 ## In Progress
-None. CORRECTION to earlier checkpoints in this session: rounds 3 and 4 of the Bash
-write-detection work were NOT each confirmed live regressions the way rounds 1-2 were.
-Testing methodology was flawed — checking whether `.ai/.dirty` existed right after a
-live `git commit && git push` doesn't prove the commit's text caused a fresh false
-trigger, because **`git commit` never clears `.dirty` — only `checkpoint_guard.py`
-(the Stop hook) does, after validating state.md/plan.md are fresh.** That hook wasn't
-actually invoked between rounds (mid-turn user messages kept the turn open), so `.dirty`
-was simply persisting from legitimate `track_changes.py` edits made in the same turn.
-Re-tested both the round-3 and round-4 trigger commit messages against their
-*contemporary* code in isolation: both came back clean (no false target). So "it broke
-again" for rounds 3-4 was likely a misread of a stale flag, not a real recurrence.
+None. Earlier this session, rounds 3-4 of Bash write-detection work were wrongly logged
+as "broke again live" — see Current Issues for the correction (testing method was
+flawed: `.dirty` isn't cleared by `git commit`, only by the Stop hook).
 
 ## Current Issues
 - Bash write-pattern detection is heuristic, not a real shell parser. Exotic constructs
   (subshells, variable expansion, backticks) in non-git commands are still out of scope.
-  README "ข้อจำกัด v1.1" not yet updated for the shlex/heredoc/git-skip changes.
+  `git merge`/`pull`/`rebase` aren't in `SAFE_GIT_SUBCOMMANDS` and still get scanned with
+  the plain pattern list, even though they can rewrite files broadly too.
 - Committing `.ai/*.md` with code is a documented convention only, not hook-enforced.
 - Confirmed (via direct, isolated function calls) real bugs: (1) `->` arrow in a commit
   message read as a redirect; (2) after fixing (1), a bare `>` in unrelated prose read
@@ -48,5 +41,7 @@ unit cases) regardless — nothing needs reverting, only the causal narrative ne
 fixing.
 
 ## Next Action
-Update README "ข้อจำกัด v1.1" for the current (shlex/heredoc/git-skip) implementation.
-Decide whether to re-run the scratch-folder clone test given the corrected picture.
+Nothing pending — README "ข้อจำกัด v1.1" and "Project change detection" now describe
+the current shlex/heredoc/git-skip implementation, including the honest 2-confirmed-
+bugs-plus-proactive-hardening framing. Consider re-running the scratch-folder clone test
+at some point given the corrected picture, but not blocking.
