@@ -13,6 +13,8 @@ v1.1 change-detection hardening.
 - [x] Extend PostToolUse change detection to cover Bash-tool file writes (2026-08-12)
 - [x] Document git-commit-with-memory convention in CLAUDE.md/AGENTS.md/README.md (2026-08-12)
 - [x] Pre-push cleanup: removed `__pycache__`, gitignored `settings.local.json` (2026-08-12)
+- [x] Replace manual `.ai/*.md` editing with AI-driven bootstrap prompts (empty-project
+      vs existing-project cases) in README.md/CLAUDE.md/AGENTS.md (2026-08-12)
 
 ## Current Tasks
 - [ ] Decide whether v2 (git diff / file watcher / repo snapshot) is needed for full

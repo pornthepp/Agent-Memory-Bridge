@@ -22,14 +22,18 @@ None — repo just cleaned up in prep for the user's own `git init`/commit/push.
   `.git` exists. User said they will `git init`/commit/push themselves.
 
 ## Last Completed
-Pre-push cleanup, at user's request:
-- Deleted `scripts/__pycache__/` (regenerable bytecode cache, already gitignored).
-- Added `.claude/settings.local.json` to `.gitignore` (session-local permission list —
-  kept the file for local use, just excluded it from git so it never gets pushed).
-- Confirmed no other stray/irrelevant files exist in the project tree.
+Replaced manual `.ai/*.md` editing in the install flow with an AI-driven bootstrap:
+- `README.md` "ติดตั้งใน Project ใหม่": step 2 is now a copy-paste prompt for the agent
+  instead of "edit these files yourself." Two variants — Case A (empty project: agent
+  writes honest "just starting" defaults, asks user for the real goal) and Case B
+  (existing project: agent reads source tree/README/git log first, no guessing).
+  `decisions.md` explicitly left empty at bootstrap.
+- `CLAUDE.md`/`AGENTS.md`: added matching "When asked to bootstrap/initialize project
+  memory" rule so both Claude Code and Codex follow the same no-fabrication behavior.
 - Prior changes still current: Bash write-detection in `track_changes.py`/`settings.json`
-  (validated), and git-handoff guidance added to CLAUDE.md/AGENTS.md/README.md.
+  (validated), git-handoff-with-commit guidance, and pre-push cleanup
+  (`__pycache__` removed, `settings.local.json` gitignored).
 
 ## Next Action
-Nothing pending from the agent side. Waiting on user to `git init` and commit/push. If
-asked again later, re-verify with `git status` before assuming repo state.
+Nothing pending from the agent side. This repo still has no `.git` — user will `git
+init`/commit/push themselves. If asked again later, re-verify with `git status` first.

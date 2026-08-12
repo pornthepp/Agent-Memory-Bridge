@@ -83,16 +83,32 @@ Claude Code รองรับ `startup`, `resume`, `clear`, `compact`, `fork`
 ## ติดตั้งใน Project ใหม่
 
 1. แตกไฟล์ทั้งหมดลง **root ของ Project**
-2. แก้ `.ai/state.md` ให้ตรงกับสถานะจริง
-3. แก้ `.ai/plan.md` ให้ตรงกับ Goal/Phase/Tasks จริง
-4. แก้ `.ai/decisions.md` เฉพาะ Decision สำคัญ
-5. ตรวจ Python:
+2. ตรวจ Python:
 
 ```powershell
 python --version
 ```
 
-6. ตรวจ Memory:
+3. เปิด Claude Code หรือ Codex จาก root ของ Project แล้วสั่งให้ AI กรอกความจำเอง
+   (ไม่ต้องแก้ `.ai/*.md` ด้วยมือ) — เลือก prompt ตามสถานการณ์:
+
+**กรณี A — โปรเจ็คว่าง ยังไม่เริ่มงาน:**
+
+```text
+เริ่ม project memory ของโปรเจ็คนี้ ตอนนี้ยังว่างอยู่ ไม่มีโค้ด ให้ตั้ง .ai/state.md
+และ .ai/plan.md เป็นค่าเริ่มต้นที่สื่อว่ายังอยู่ช่วงเริ่มต้น ยังไม่มี Goal ที่ชัดเจน
+แล้วถามฉันว่าเป้าหมายโปรเจ็คคืออะไร ก่อนกรอกอะไรที่เดาเอง
+```
+
+**กรณี B — โปรเจ็คเริ่มมาแล้ว มีโค้ด/ประวัติงานอยู่ก่อน:**
+
+```text
+เริ่ม project memory ของโปรเจ็คนี้ อ่านโค้ด, README, git log (ถ้ามี) ให้ทั่วก่อน แล้วสรุป
+สถานะจริงลง .ai/state.md, เป้าหมาย/milestone ที่เห็นได้จริงลง .ai/plan.md ห้ามเดาสิ่งที่
+ไม่มีหลักฐาน ถ้าข้อมูลไม่พอต้องสรุป Goal หรือ Phase ให้ถามฉันก่อน อย่ากรอกมั่ว
+```
+
+4. ตรวจ Memory:
 
 ```powershell
 python scripts/validate_memory.py
@@ -103,6 +119,8 @@ python scripts/validate_memory.py
 ```text
 MEMORY VALIDATION PASSED
 ```
+
+`.ai/decisions.md` ไม่ต้องกรอกตอนติดตั้ง ปล่อยว่างไว้ก่อน — เก็บเฉพาะ Decision สำคัญที่เกิดขึ้นจริงระหว่างทำงาน (ดูหัวข้อ Memory Format ด้านล่าง)
 
 ## ใช้กับ Codex
 
