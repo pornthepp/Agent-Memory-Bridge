@@ -65,12 +65,10 @@ the raw string.
 D-003's regex broke twice on real commit messages (`->` arrows, bare `>` in prose) —
 text inside a quoted `-m` argument that regex can't tell from shell syntax.
 
-**Round 3:** shlex alone wasn't enough — a heredoc-built commit message desynced
-shlex's quote-tracking (shlex has no heredoc concept). Added `strip_heredocs()`, but as
-a quote-*unaware* regex scan it also misfired.
-
-**Round 4:** rewrote `strip_heredocs()` quote-aware (tracks `'`/`"`, only treats `<<` as
-a heredoc when unquoted, no longer truncates on missing terminator). Added
-`SAFE_GIT_SUBCOMMANDS`: skip scanning entirely for `status/log/diff/.../commit/push` —
-none rewrite project files, and all 4 failures happened inside one of them. Two
-independent layers now. 21/21 cases pass.
+**Round 3-4 (proactive, not independently confirmed live):** added quote-aware
+`strip_heredocs()` (heredocs are a real shlex blind spot) and `SAFE_GIT_SUBCOMMANDS` —
+skip scanning entirely for `status/log/diff/.../commit/push`, which never rewrite
+project files. Session-internal claims that these rounds fixed a *live* recurrence were
+later found to rest on a flawed test (checking `.dirty` right after `git commit`, which
+never clears it — only the Stop hook does). Code kept regardless: correct, well-tested
+(21/21 cases), reduces real attack surface even without a proven live trigger.
