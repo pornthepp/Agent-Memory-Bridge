@@ -1,5 +1,11 @@
+import sys
 from pathlib import Path
 from memory_common import project_root
+
+# Windows pipes stdout through the console codepage (e.g. cp1252) by default,
+# which crashes on non-ASCII memory content (Thai text, etc). Force UTF-8.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 
 root = project_root()
 

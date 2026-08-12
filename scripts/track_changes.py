@@ -47,8 +47,8 @@ elif tool_name == "NotebookEdit":
 elif tool_name == "Bash":
     command = str(tool_input.get("command", ""))
 
-    # > file / >> file (skip fd dup like 2>&1)
-    for match in re.finditer(r"(?<![0-9&])>{1,2}(?!&)\s*([^\s;&|<>]+)", command):
+    # > file / >> file (skip fd dup like 2>&1, and prose arrows like -> or =>)
+    for match in re.finditer(r"(?<![0-9&=\-])>{1,2}(?!&)\s*([^\s;&|<>]+)", command):
         add_path(match.group(1).strip("\"'"))
 
     # cp / mv src... dest  (last whitespace token is the destination)
