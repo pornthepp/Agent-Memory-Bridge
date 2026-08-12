@@ -1,6 +1,11 @@
 # AI Project Memory Guidance
 
-This project uses automatic runtime hooks. The memory files are injected automatically; do not rely on this file to load them.
+If your runtime supports lifecycle hooks that inject `.ai/*.md` automatically at session
+start (e.g. Codex), the memory files arrive on their own — do not rely on this file to
+load them. If it does not (no `SessionStart`-equivalent hook — e.g. Google Antigravity,
+which only auto-loads this `AGENTS.md`/`GEMINI.md` file itself, not `.ai/*.md`): **read
+`.ai/state.md`, `.ai/plan.md`, and `.ai/decisions.md` yourself as the first step of every
+session**, before doing anything else.
 
 When a checkpoint hook asks for a memory update:
 

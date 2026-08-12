@@ -12,36 +12,27 @@ v1.1 change-detection hardening, now under its real name.
 - Guidance tells agents to commit `.ai/*.md` together with code (not hook-enforced).
 
 ## In Progress
-None. Earlier this session, rounds 3-4 of Bash write-detection work were wrongly logged
-as "broke again live" — see Current Issues for the correction (testing method was
-flawed: `.dirty` isn't cleared by `git commit`, only by the Stop hook).
+None — see Next Action for the one pending step (commit + push this checkpoint).
 
 ## Current Issues
 - Bash write-pattern detection is heuristic, not a real shell parser. Exotic constructs
   (subshells, variable expansion, backticks) in non-git commands are still out of scope.
-  `git merge`/`pull`/`rebase` aren't in `SAFE_GIT_SUBCOMMANDS` and still get scanned with
-  the plain pattern list, even though they can rewrite files broadly too.
+  `git merge`/`pull`/`rebase` aren't in `SAFE_GIT_SUBCOMMANDS`, still scanned plainly.
 - Committing `.ai/*.md` with code is a documented convention only, not hook-enforced.
-- Confirmed (via direct, isolated function calls) real bugs: (1) `->` arrow in a commit
-  message read as a redirect; (2) after fixing (1), a bare `>` in unrelated prose read
-  the same way. Both fixed by moving to `shlex.split()`-based tokenizing (D-005).
-- NOT independently confirmed, but kept as reasonable proactive hardening: quote-aware
-  heredoc stripping (heredocs are a real shlex blind spot even if not proven to have
-  fired live) and skipping write-scans for git metadata subcommands (add/commit/push/
-  status/etc. — structurally can't rewrite project files, so scanning them was always
-  unnecessary risk for no benefit).
+- **Antigravity (Gemini) has no `SessionStart`/`PreCompact`-equivalent hook** — confirmed
+  via web research (D-006). Only `PreToolUse`/`PostToolUse`/`PreInvocation`/
+  `PostInvocation`/`Stop` exist. Full `.agents/hooks.json` support deferred by user
+  choice ("ยังก่อนดีกว่า"). Fallback shipped instead: `AGENTS.md` (which Antigravity
+  auto-loads natively) now tells non-hook agents to read `.ai/*.md` themselves first.
 
 ## Last Completed
-Corrected the session's own record-keeping: verified via `checkpoint_guard.py` that
-`.dirty` clears normally when actually invoked (it did, cleanly). Re-tested the round-3
-and round-4 trigger commands in isolation against their contemporary code — both clean,
-contradicting the "broke again" claims made mid-session. Current code (shlex tokenizer +
-quote-aware heredoc stripping + git-metadata skip) is correct and well-tested (21/21
-unit cases) regardless — nothing needs reverting, only the causal narrative needed
-fixing.
+Researched Antigravity hook support (WebSearch + WebFetch on antigravity.google/docs and
+independent blog posts) — confirmed no SessionStart/PreCompact hook exists there, and
+confirmed Antigravity does natively auto-load `AGENTS.md`. Fixed `AGENTS.md`'s opening
+line, which previously told agents to NOT rely on it to load memory (correct for
+Codex/Claude Code, actively wrong for Antigravity, which has nothing else to fall back
+on). Logged as D-006. Full Antigravity `hooks.json` integration explicitly deferred.
 
 ## Next Action
-Nothing pending — README "ข้อจำกัด v1.1" and "Project change detection" now describe
-the current shlex/heredoc/git-skip implementation, including the honest 2-confirmed-
-bugs-plus-proactive-hardening framing. Consider re-running the scratch-folder clone test
-at some point given the corrected picture, but not blocking.
+Commit + push this checkpoint (`AGENTS.md` fallback fix, `.ai/decisions.md` D-006,
+this state/plan sync). Nothing else pending.

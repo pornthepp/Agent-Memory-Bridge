@@ -34,6 +34,9 @@ v1.1 change-detection hardening.
 - [x] Updated README.md "Project change detection" + "ข้อจำกัด v1.1" to match the real
       shlex/heredoc/git-skip implementation, with the honest 2-confirmed-bugs framing
       (2026-08-12)
+- [x] Researched Antigravity hook support (confirmed: no SessionStart/PreCompact
+      equivalent); shipped `AGENTS.md` fallback so non-hook agents self-load memory
+      (D-006) (2026-08-12)
 
 ## Current Tasks
 - [ ] Decide whether the git-commit-with-memory rule should stay convention-only or
@@ -41,7 +44,9 @@ v1.1 change-detection hardening.
 - [ ] Clean up scratch test folder (user said they'd do it later)
 - [ ] Consider adding `merge`/`pull`/`rebase` handling (not in the safe list, not
       pattern-scanned specially either — noted as a known gap, not urgent)
+- [ ] Build real `.agents/hooks.json` for Antigravity (PostToolUse/Stop only —
+      SessionStart/PreCompact have no hook to map to) — deferred by user choice
 
 ## Next Milestone
-Bash write-detection is settled for now: 2 confirmed regex bugs fixed via shlex, plus
-documented proactive hardening. No blocking work left on this thread.
+Bash write-detection is settled. Antigravity gets a documented fallback for now; full
+hooks.json integration is a deliberately deferred, not-yet-scheduled task.

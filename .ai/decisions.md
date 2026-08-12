@@ -8,7 +8,7 @@
 Use `.ai/` as the shared project memory directory for Codex and Claude Code.
 
 **Reason:**
-Both agents should read and maintain the same project state instead of creating separate memory systems.
+Both agents should read/maintain the same project state, not separate memory systems.
 
 ---
 
@@ -20,22 +20,17 @@ Both agents should read and maintain the same project state instead of creating 
 Use runtime lifecycle hooks to load and protect project memory.
 
 **Reason:**
-Critical memory behavior must not depend only on the model remembering to read or update files.
+Critical memory behavior must not depend only on the model remembering to update files.
 
 ---
 
-## D-003 — Bash writes detected via regex patterns, not asked in CLAUDE.md
+## D-003 — Bash writes: detect via hook, not a CLAUDE.md ask (Superseded by D-005)
 
-**Status:** Accepted
+**Status:** Superseded
 
-**Decision:**
-Extend PostToolUse change detection to the `Bash` tool using regex patterns for common
-write commands (`>`, `>>`, `cp`, `mv`, `tee`, `touch`, `sed -i`), with a broad dirty
-fallback for ambiguous write commands (`git apply`, `patch`, `rsync -a`, installs).
-
-**Reason:**
-User proposed telling the agent in CLAUDE.md/AGENTS.md to flag `.dirty` manually
-instead. Rejected per D-002. Superseded by D-005 (regex proved unreliable).
+**Decision:** Extended `PostToolUse` to `Bash` via regex patterns, mechanically —
+rejected the alternative of asking the agent to flag `.dirty` manually (per D-002).
+Regex itself proved unreliable; see D-005.
 
 ---
 
@@ -65,10 +60,23 @@ the raw string.
 D-003's regex broke twice on real commit messages (`->` arrows, bare `>` in prose) —
 text inside a quoted `-m` argument that regex can't tell from shell syntax.
 
-**Round 3-4 (proactive, not independently confirmed live):** added quote-aware
-`strip_heredocs()` (heredocs are a real shlex blind spot) and `SAFE_GIT_SUBCOMMANDS` —
-skip scanning entirely for `status/log/diff/.../commit/push`, which never rewrite
-project files. Session-internal claims that these rounds fixed a *live* recurrence were
-later found to rest on a flawed test (checking `.dirty` right after `git commit`, which
-never clears it — only the Stop hook does). Code kept regardless: correct, well-tested
-(21/21 cases), reduces real attack surface even without a proven live trigger.
+**Round 3-4 (proactive, not confirmed live):** added quote-aware `strip_heredocs()` and
+`SAFE_GIT_SUBCOMMANDS` skip-scan. "Fixed a live recurrence" claims rested on a flawed
+test (`.dirty` only clears via the Stop hook, not `git commit`). Code kept: correct,
+well-tested (21/21 cases).
+
+---
+
+## D-006 — Antigravity: no SessionStart/PreCompact hook, fallback via AGENTS.md
+
+**Status:** Accepted
+
+**Decision:**
+Antigravity has no `SessionStart`/`PreCompact`-equivalent hook (confirmed: only
+`PreToolUse`/`PostToolUse`/`PreInvocation`/`PostInvocation`/`Stop` exist). Full
+`hooks.json` support deferred. Instead, `AGENTS.md` (auto-loaded natively by
+Antigravity) now tells non-hook agents to read `.ai/*.md` themselves as step one.
+
+**Reason:**
+Closes the worst gap (memory never loading) at zero engineering cost, without
+committing to the bigger hooks.json integration yet.
