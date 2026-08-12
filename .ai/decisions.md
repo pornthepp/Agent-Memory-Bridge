@@ -1,0 +1,40 @@
+# Decision Log
+
+## D-001 — Shared AI Project Memory
+
+**Status:** Accepted
+
+**Decision:**
+Use `.ai/` as the shared project memory directory for Codex and Claude Code.
+
+**Reason:**
+Both agents should read and maintain the same project state instead of creating separate memory systems.
+
+---
+
+## D-002 — Runtime Lifecycle Hooks
+
+**Status:** Accepted
+
+**Decision:**
+Use runtime lifecycle hooks to load and protect project memory.
+
+**Reason:**
+Critical memory behavior must not depend only on the model remembering to read or update files.
+
+---
+
+## D-003 — Bash writes detected via regex patterns, not asked in CLAUDE.md
+
+**Status:** Accepted
+
+**Decision:**
+Extend PostToolUse change detection to the `Bash` tool using regex patterns for common
+write commands (`>`, `>>`, `cp`, `mv`, `tee`, `touch`, `sed -i`), with a broad dirty
+fallback for ambiguous write commands (`git apply`, `patch`, `rsync -a`, installs).
+
+**Reason:**
+User proposed instead telling the agent in CLAUDE.md/AGENTS.md to manually flag `.dirty`
+after Bash writes. Rejected per D-002: that reintroduces dependence on the model
+remembering. Detection stays hook-side (mechanical), even though the regex approach is
+best-effort, not a full shell parser — see README "ข้อจำกัด v1.1".

@@ -1,0 +1,7 @@
+.ai/.dirty
+.ai/.checkpoint-retry
+.ai/precompact-recovery.md
+.ai/precompact-test.log
+__pycache__/
+*.pyc
+.claude/settings.local.json
