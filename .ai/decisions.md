@@ -52,3 +52,21 @@ GitHub remote already uses this name: `github.com/pornthepp/Agent-Memory-Bridge`
 **Reason:**
 User picked it from suggested names; reflects what the tool actually does — bridges
 project memory across agents (Codex ↔ Claude Code) and across sessions.
+
+---
+
+## D-005 — Supersedes D-003: tokenize Bash commands instead of regex-scanning them
+
+**Status:** Accepted
+
+**Decision:**
+Detect Bash write targets by `shlex.split()`-tokenizing the command, not by regex over
+the raw string.
+
+**Reason:**
+D-003's regex approach broke twice on real commit messages: first `->` arrows read as
+redirects, then (after patching that) a bare `>` in prose ("before > in the lookbehind")
+read the same way. Both were text inside a quoted `-m` argument. Regex can't reliably
+tell quoted text from shell syntax without re-implementing a shell tokenizer — so use
+`shlex`, which already does that: quoted text becomes one token, and `>`/`>>` only match
+as their own unquoted token.

@@ -12,40 +12,33 @@ v1.1 change-detection hardening, now under its real name.
 - Guidance tells agents to commit `.ai/*.md` together with code (not hook-enforced).
 
 ## In Progress
-Real end-to-end test completed: cloned the pushed repo into a scratch folder
-(`%TEMP%/claude/.../scratchpad/amb-test/repo`, not inside this repo), reset its
-`.ai/*.md` to fresh-install content, scaffolded `calculator.py`, and drove
-`session_start.py` / `track_changes.py` / `checkpoint_guard.py` / `precompact_guard.py`
-against that clone with `CLAUDE_PROJECT_DIR` overridden to the clone path (a live second
-Claude Code session can't be opened from here, so this simulates the exact env/JSON
-Claude Code would send). All 4 hooks behaved correctly. Scratch folder still exists;
-user said they'd delete it later.
+None — regex-based Bash detection was replaced with a tokenizer-based approach after a
+second false positive recurred (see Current Issues). Fresh-clone test (scratch folder,
+`calculator.py`, all 4 hooks) from earlier this session still stands; not re-run after
+this rewrite but the underlying function was unit-tested directly (16 cases, see Last
+Completed).
 
 ## Current Issues
-- Bash write-pattern detection (`scripts/track_changes.py`) is regex-based, not a real
-  shell parser. Known gaps documented in README.md "ข้อจำกัด v1.1".
+- Bash write-pattern detection is still heuristic, not a real shell parser — now
+  tokenizes with `shlex.split()` instead of regex-scanning raw text, which eliminates
+  "quoted text looks like shell syntax" false positives. Exotic constructs (subshells,
+  variable expansion, backticks) are still out of scope. README "ข้อจำกัด v1.1" not yet
+  updated to match.
 - Committing `.ai/*.md` with code is a documented convention only, not hook-enforced.
-- FIXED: `>`/`>>` regex misread prose arrows (`->`, `=>` in commit messages) as
-  redirection, falsely setting `.dirty`. Reproduced in the clone too (confirmed real,
-  not a local artifact), then fixed there and verified.
-- FIXED, MORE SEVERE: `session_start.py` crashed with `UnicodeEncodeError` on Windows
-  whenever `.ai/*.md` contained non-ASCII text (this repo's `decisions.md` has Thai in
-  D-003/D-004). Root cause: Python's stdout defaults to the console codepage (cp1252)
-  on Windows, not UTF-8. This reproduced on the actual live repo, not just the clone —
-  **the next real SessionStart on this machine would have crashed and silently failed
-  to load memory** until fixed just now (`sys.stdout.reconfigure(encoding="utf-8")`).
-  Verified fixed on both this repo and the clone.
+- ROOT-CAUSED (D-005): the `->`-arrow regex patch (`a3859fd`) broke again almost
+  immediately on a different commit message with a bare `>` in prose ("before > in the
+  lookbehind" → misread as redirect to file "in"). Root cause: regex scanned the whole
+  raw string, so quoted-argument text was indistinguishable from real shell syntax.
+  Rewrote around `shlex.split()` — quoted text becomes one token, so `>`/`>>` inside
+  quotes can never be misread. See D-005 in decisions.md.
 
 ## Last Completed
-Ran a full hook-cycle test against a fresh clone: SessionStart (crashed, fixed, then
-passed), PostToolUse(Write) on `calculator.py` (dirty set correctly), Stop checkpoint
-(blocked while stale, passed + cleared `.dirty` after honest memory update), Bash-arrow
-false positive (reproduced, fixed, verified — real redirects still detected),
-PreCompact guard (wrote `precompact-recovery.md` correctly). `calculator.py` itself runs
-correctly (5, 3, 24, 5.0).
+Rewrote Bash write-detection: `bash_write_targets()` tokenizes with `shlex`, splits on
+`&&`/`||`/`;`/`|`, exact-token match on `>`/`>>`, per-subcommand cp/mv/tee/touch/sed -i,
+ambiguous-write flag for git apply/checkout --/patch/rsync -a/npm|pip install.
+Unit-tested 16/16 (both real failing commit messages + real redirects + all other
+patterns) and end-to-end via stdin JSON. Not yet committed.
 
 ## Next Action
-Commit + push both fixes (`session_start.py` UTF-8 fix, `track_changes.py` arrow fix)
-and this checkpoint. Consider applying the same `sys.stdout.reconfigure` defensively to
-other scripts if they ever print non-ASCII content directly (currently they only print
-`json.dumps(...)`, which auto-escapes non-ASCII, so they're not at risk today).
+Commit + push. Update README "ข้อจำกัด v1.1" to describe the tokenizer, not the old
+regex list.

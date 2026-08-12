@@ -1,9 +1,73 @@
 import json
 import re
+import shlex
 import sys
 from pathlib import Path
 
 from memory_common import project_root
+
+SEPARATORS = {"&&", "||", ";", "|"}
+
+
+def bash_write_targets(command):
+    """Tokenize a Bash command (respecting quotes) and find write targets.
+
+    Using shlex instead of scanning the raw string means text inside quotes
+    (e.g. a git commit message containing "->" or a bare ">") is never
+    mistaken for shell syntax — it's just part of one token.
+    """
+    try:
+        tokens = shlex.split(command, posix=True)
+    except ValueError:
+        # Unbalanced quotes: can't safely tokenize, skip detection this run
+        # rather than guess.
+        return [], False
+
+    groups = [[]]
+    for tok in tokens:
+        if tok in SEPARATORS:
+            groups.append([])
+        else:
+            groups[-1].append(tok)
+
+    targets = []
+    ambiguous = False
+
+    for group in groups:
+        if not group:
+            continue
+
+        for i, tok in enumerate(group):
+            if tok in (">", ">>") and i + 1 < len(group):
+                targets.append(group[i + 1])
+
+        head = group[0]
+        rest = group[1:]
+        non_flags = [t for t in rest if not t.startswith("-")]
+
+        if head in ("cp", "mv"):
+            if non_flags:
+                targets.append(non_flags[-1])
+        elif head == "tee":
+            if non_flags:
+                targets.append(non_flags[0])
+        elif head == "touch":
+            targets.extend(non_flags)
+        elif head == "sed" and any(f.startswith("-i") for f in rest if f.startswith("-")):
+            if non_flags:
+                targets.append(non_flags[-1])
+        elif head == "git" and rest[:1] == ["apply"]:
+            ambiguous = True
+        elif head == "git" and "checkout" in rest and "--" in rest:
+            ambiguous = True
+        elif head == "patch":
+            ambiguous = True
+        elif head == "rsync" and any(f.startswith("-") and "a" in f for f in rest):
+            ambiguous = True
+        elif head in ("npm", "pip") and rest[:1] == ["install"]:
+            ambiguous = True
+
+    return targets, ambiguous
 
 
 data = json.load(sys.stdin)
@@ -46,35 +110,15 @@ elif tool_name == "NotebookEdit":
 # Claude Code Bash tool: shell commands that write files.
 elif tool_name == "Bash":
     command = str(tool_input.get("command", ""))
+    targets, ambiguous = bash_write_targets(command)
 
-    # > file / >> file (skip fd dup like 2>&1, and prose arrows like -> or =>)
-    for match in re.finditer(r"(?<![0-9&=\-])>{1,2}(?!&)\s*([^\s;&|<>]+)", command):
-        add_path(match.group(1).strip("\"'"))
-
-    # cp / mv src... dest  (last whitespace token is the destination)
-    for match in re.finditer(r"\b(?:cp|mv)\s+(?:-\S+\s+)*.+?\s(\S+)\s*(?:[;&|]|$)", command):
-        add_path(match.group(1).strip("\"'"))
-
-    # tee [-a] file
-    for match in re.finditer(r"\btee\b\s+(?:-\S+\s+)*(\S+)", command):
-        add_path(match.group(1).strip("\"'"))
-
-    # touch file [file ...]
-    for match in re.finditer(r"\btouch\s+(.+?)\s*(?:[;&|]|$)", command):
-        for token in match.group(1).split():
-            add_path(token.strip("\"'"))
-
-    # sed -i ... file
-    for match in re.finditer(r"\bsed\s+-i\S*\s+.+?\s(\S+)\s*(?:[;&|]|$)", command):
-        add_path(match.group(1).strip("\"'"))
+    for target in targets:
+        add_path(target)
 
     # Commands that write files but whose target isn't a plain argument
     # (git apply, patch, rsync -a, package installs). Can't pinpoint the
     # file, so if nothing else matched, fall back to marking dirty.
-    if not changed_files and re.search(
-        r"\b(git\s+apply|git\s+checkout\s+--|patch\b|rsync\b[^\n]*-a|npm\s+install|pip\s+install)\b",
-        command,
-    ):
+    if not changed_files and ambiguous:
         ambiguous_write = True
 
 # Codex apply_patch PostToolUse.

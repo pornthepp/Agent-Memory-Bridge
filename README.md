@@ -61,7 +61,11 @@ Claude Code รองรับ `startup`, `resume`, `clear`, `compact`, `fork`
 ### Project change detection
 - Codex: ตรวจ `apply_patch`
 - Claude Code: ตรวจ `Write`, `Edit`, `NotebookEdit`
-- Claude Code Bash: ตรวจ pattern เขียนไฟล์ (`>`, `>>`, `cp`, `mv`, `tee`, `touch`, `sed -i`)
+- Claude Code Bash: **tokenize คำสั่งด้วย `shlex.split()` ก่อน** (ไม่ใช่ regex scan
+  string ดิบ) แล้วค่อยหา pattern เขียนไฟล์ (`>`, `>>`, `cp`, `mv`, `tee`, `touch`,
+  `sed -i`) จาก token ที่ได้ — ข้อความใน quote (เช่น `git commit -m "..."`) จะกลายเป็น
+  token เดียว ไม่มีทางถูกอ่านเป็น shell syntax ผิดๆ (ดูหัวข้อ "ข้อจำกัด v1.1" ว่าทำไม
+  ต้องเปลี่ยนจาก regex มาเป็น tokenizer)
   ส่วนคำสั่งที่ระบุไฟล์ปลายทางไม่ได้ตรงๆ (`git apply`, `patch`, `rsync -a`, `npm/pip install`)
   จะ fallback เป็น dirty ทันทีแบบไม่เจาะจงไฟล์
 - เมื่อไฟล์ Project เปลี่ยน จะสร้าง `.ai/.dirty`
@@ -213,8 +217,14 @@ Claude Code จำกัด Hook output ประมาณ 10,000 characters
 Change Detection จับเครื่องมือแก้ไฟล์หลัก (`Write`, `Edit`, `NotebookEdit`, Codex `apply_patch`)
 และ pattern เขียนไฟล์ที่พบบ่อยใน Claude Code `Bash` (ดูหัวข้อ Project change detection ด้านบน)
 
-Bash pattern เป็น regex แบบ best-effort ไม่ใช่ shell parser จริง จุดที่ยังพลาดได้:
-- คำสั่งเขียนไฟล์ผ่านตัวแปร/subshell ที่ regex จับปลายทางไม่ได้ (เช่น `$OUT > $(f)`)
+Bash detection ใช้ `shlex.split()` แยก token ก่อนค่อยหา pattern (ไม่ใช่ regex scan
+string ดิบเหมือน v1.1 รุ่นแรก) — เดิมเคยใช้ regex ล้วนๆ แล้วพังจริง 2 รอบ เพราะข้อความ
+ใน quote (เช่น commit message ที่มี `->` หรือ `>` เดี่ยวๆ ในประโยค) ถูกอ่านผิดเป็น
+redirect (ดู `.ai/decisions.md` D-005) เปลี่ยนมาใช้ tokenizer แก้ปัญหานี้ได้ทั้งหมด
+เพราะข้อความใน quote จะกลายเป็น token เดียว ไม่มีทางถูกตีความเป็น shell syntax
+
+ยังไม่ใช่ shell parser เต็มรูปแบบ จุดที่ยังพลาดได้:
+- คำสั่งเขียนไฟล์ผ่านตัวแปร/subshell ที่ tokenizer จับปลายทางไม่ได้ (เช่น `$OUT > $(f)`)
 - PowerShell หรือ external tool อื่นที่ไม่ผ่าน Bash tool ของ Claude Code
 - คำสั่งเขียนไฟล์แบบ custom ที่ไม่อยู่ใน pattern list (นอกเหนือ `>`, `>>`, `cp`, `mv`, `tee`, `touch`, `sed -i`)
 

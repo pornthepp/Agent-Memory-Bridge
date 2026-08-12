@@ -18,23 +18,21 @@ v1.1 change-detection hardening.
 - [x] git init, commit, and push to `origin/main` (2026-08-12) —
       `github.com/pornthepp/Agent-Memory-Bridge`
 - [x] Renamed project to Agent Memory Bridge, committed `fe0db00`, pushed (2026-08-12)
-- [x] Found + fixed false-positive dirty flag: `>`/`>>` regex misread prose arrows
-      (`->`, `=>`) as redirection (2026-08-12)
-
 - [x] Real end-to-end test: cloned repo to scratch folder, scaffolded calculator.py,
       drove SessionStart/PostToolUse/Stop/PreCompact hooks against it (2026-08-12)
 - [x] Found + fixed a severe bug: `session_start.py` crashed on Windows (`cp1252`
-      stdout) whenever memory files had non-ASCII text — affected this live repo,
-      not just the clone (2026-08-12)
+      stdout) whenever memory files had non-ASCII text — pushed as `a3859fd` (2026-08-12)
+- [x] Rewrote Bash write-detection around `shlex` tokenizing instead of regex, after the
+      regex patch (D-003/earlier commit) broke again on a different real commit message
+      (D-005 supersedes D-003) (2026-08-12)
 
 ## Current Tasks
-- [ ] Commit + push both fixes (session_start.py UTF-8, track_changes.py arrow regex)
-- [ ] Decide whether v2 (git diff / file watcher / repo snapshot) is needed for full
-      write-detection accuracy, or current regex-pattern coverage is sufficient
+- [ ] Commit + push the tokenizer rewrite
+- [ ] Update README.md "ข้อจำกัด v1.1" to describe the tokenizer, not the old regex list
 - [ ] Decide whether the git-commit-with-memory rule should stay convention-only or
       become hook-enforced
 - [ ] Clean up scratch test folder (user said they'd do it later)
 
 ## Next Milestone
-Push the fixes; consider whether to audit other scripts for the same stdout-encoding
-risk pattern before calling change-detection hardening "done."
+Push the tokenizer fix; re-run the clone/calculator end-to-end test once more against
+it before calling Bash write-detection settled.
