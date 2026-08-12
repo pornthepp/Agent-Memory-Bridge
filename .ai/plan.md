@@ -22,17 +22,18 @@ v1.1 change-detection hardening.
       drove SessionStart/PostToolUse/Stop/PreCompact hooks against it (2026-08-12)
 - [x] Found + fixed a severe bug: `session_start.py` crashed on Windows (`cp1252`
       stdout) whenever memory files had non-ASCII text — pushed as `a3859fd` (2026-08-12)
-- [x] Rewrote Bash write-detection around `shlex` tokenizing instead of regex, after the
-      regex patch (D-003/earlier commit) broke again on a different real commit message
-      (D-005 supersedes D-003) (2026-08-12)
+- [x] Rewrote Bash write-detection around `shlex` tokenizing (D-005 supersedes D-003),
+      then found a 3rd real failure (heredoc content desyncs shlex quoting) and added
+      `strip_heredocs()` on top — 18/18 test cases pass (2026-08-12)
 
 ## Current Tasks
-- [ ] Commit + push the tokenizer rewrite
-- [ ] Update README.md "ข้อจำกัด v1.1" to describe the tokenizer, not the old regex list
+- [ ] Commit + push the heredoc-stripping fix (watch its own commit message for a
+      recurrence, given 2 of the 3 prior fixes broke on their own commit)
+- [ ] Update README.md "ข้อจำกัด v1.1" for heredoc-stripping specifically
 - [ ] Decide whether the git-commit-with-memory rule should stay convention-only or
       become hook-enforced
 - [ ] Clean up scratch test folder (user said they'd do it later)
 
 ## Next Milestone
-Push the tokenizer fix; re-run the clone/calculator end-to-end test once more against
-it before calling Bash write-detection settled.
+Push the fix and confirm (not just assume) it holds through its own commit + at least
+one more real session before calling Bash write-detection settled.

@@ -8,6 +8,56 @@ from memory_common import project_root
 
 SEPARATORS = {"&&", "||", ";", "|"}
 
+HEREDOC_START_RE = re.compile(
+    r"<<-?\s*(?:'([^']*)'|\"([^\"]*)\"|([A-Za-z_][A-Za-z0-9_]*))"
+)
+
+
+def strip_heredocs(command):
+    """Remove heredoc bodies (`<<'EOF' ... EOF`) before tokenizing.
+
+    shlex has no concept of heredocs — it just tracks bare quote characters.
+    A heredoc body (e.g. a multi-line commit message built via
+    `$(cat <<'EOF' ... EOF)`) commonly contains its own literal quote marks
+    ("like this"), which desyncs shlex's quote-tracking and can make
+    unrelated later text look like it's outside any quote. Heredoc bodies
+    are never real shell syntax, so drop them before scanning for anything.
+    """
+    out = []
+    pos = 0
+
+    while True:
+        match = HEREDOC_START_RE.search(command, pos)
+        if not match:
+            out.append(command[pos:])
+            break
+
+        delim = match.group(1) or match.group(2) or match.group(3)
+        line_end = command.find("\n", match.end())
+
+        if line_end == -1:
+            out.append(command[pos:])
+            break
+
+        # Keep the heredoc marker's own line (it may carry real syntax,
+        # e.g. `cat <<EOF > out.txt`); drop everything from the body on.
+        out.append(command[pos:line_end + 1])
+
+        terminator = re.compile(
+            r"^[ \t]*" + re.escape(delim) + r"[ \t]*$", re.MULTILINE
+        )
+        term_match = terminator.search(command, line_end + 1)
+
+        if not term_match:
+            pos = len(command)
+            break
+
+        pos = term_match.end()
+        if pos < len(command) and command[pos] == "\n":
+            pos += 1
+
+    return "".join(out)
+
 
 def bash_write_targets(command):
     """Tokenize a Bash command (respecting quotes) and find write targets.
@@ -16,6 +66,8 @@ def bash_write_targets(command):
     (e.g. a git commit message containing "->" or a bare ">") is never
     mistaken for shell syntax — it's just part of one token.
     """
+    command = strip_heredocs(command)
+
     try:
         tokens = shlex.split(command, posix=True)
     except ValueError:

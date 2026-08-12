@@ -34,10 +34,9 @@ write commands (`>`, `>>`, `cp`, `mv`, `tee`, `touch`, `sed -i`), with a broad d
 fallback for ambiguous write commands (`git apply`, `patch`, `rsync -a`, installs).
 
 **Reason:**
-User proposed instead telling the agent in CLAUDE.md/AGENTS.md to manually flag `.dirty`
-after Bash writes. Rejected per D-002: that reintroduces dependence on the model
-remembering. Detection stays hook-side (mechanical), even though the regex approach is
-best-effort, not a full shell parser — see README "ข้อจำกัด v1.1".
+User proposed telling the agent in CLAUDE.md/AGENTS.md to manually flag `.dirty` after
+Bash writes instead. Rejected per D-002: reintroduces dependence on the model
+remembering. Superseded by D-005 (regex proved unreliable).
 
 ---
 
@@ -64,9 +63,11 @@ Detect Bash write targets by `shlex.split()`-tokenizing the command, not by rege
 the raw string.
 
 **Reason:**
-D-003's regex approach broke twice on real commit messages: first `->` arrows read as
-redirects, then (after patching that) a bare `>` in prose ("before > in the lookbehind")
-read the same way. Both were text inside a quoted `-m` argument. Regex can't reliably
-tell quoted text from shell syntax without re-implementing a shell tokenizer — so use
-`shlex`, which already does that: quoted text becomes one token, and `>`/`>>` only match
-as their own unquoted token.
+D-003's regex broke twice on real commit messages (`->` arrows, then bare `>` in prose) —
+both were text inside a quoted `-m` argument that regex can't tell from shell syntax.
+
+**Update:** shlex alone wasn't enough either — a 3rd real failure hit almost
+immediately: a heredoc-built commit message (`$(cat <<'EOF' ... EOF)`) containing its
+own literal `"` characters desyncs shlex's quote-tracking (shlex has no concept of
+heredocs). Added `strip_heredocs()`: removes heredoc bodies before tokenizing, since
+they're never real shell syntax. Verified against all 3 real failures + 15 other cases.

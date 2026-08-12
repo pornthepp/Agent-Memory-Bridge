@@ -12,33 +12,34 @@ v1.1 change-detection hardening, now under its real name.
 - Guidance tells agents to commit `.ai/*.md` together with code (not hook-enforced).
 
 ## In Progress
-None — regex-based Bash detection was replaced with a tokenizer-based approach after a
-second false positive recurred (see Current Issues). Fresh-clone test (scratch folder,
-`calculator.py`, all 4 hooks) from earlier this session still stands; not re-run after
-this rewrite but the underlying function was unit-tested directly (16 cases, see Last
-Completed).
+Bash write-detection has now been "fixed" 3 times in this session for the same class of
+bug (see Current Issues) — flagging that pattern explicitly rather than just claiming
+round 3 is the last one. Each fix was verified against every prior real failure, so
+regressions are covered, but a 4th unseen edge case can't be ruled out from testing
+alone. Not re-run against the scratch-folder clone since the heredoc fix; only unit- and
+stdin-tested directly.
 
 ## Current Issues
-- Bash write-pattern detection is still heuristic, not a real shell parser — now
-  tokenizes with `shlex.split()` instead of regex-scanning raw text, which eliminates
-  "quoted text looks like shell syntax" false positives. Exotic constructs (subshells,
-  variable expansion, backticks) are still out of scope. README "ข้อจำกัด v1.1" not yet
-  updated to match.
+- Bash write-pattern detection is heuristic, not a real shell parser. Exotic constructs
+  (subshells, variable expansion, backticks) are still out of scope. README "ข้อจำกัด
+  v1.1" not yet updated for the heredoc-stripping change specifically.
 - Committing `.ai/*.md` with code is a documented convention only, not hook-enforced.
-- ROOT-CAUSED (D-005): the `->`-arrow regex patch (`a3859fd`) broke again almost
-  immediately on a different commit message with a bare `>` in prose ("before > in the
-  lookbehind" → misread as redirect to file "in"). Root cause: regex scanned the whole
-  raw string, so quoted-argument text was indistinguishable from real shell syntax.
-  Rewrote around `shlex.split()` — quoted text becomes one token, so `>`/`>>` inside
-  quotes can never be misread. See D-005 in decisions.md.
+- 3 real failures of the same bug class this session, each caused by the *previous*
+  fix's blind spot: (1) `->` arrow in a commit message read as redirect → fixed by
+  lookbehind exclusion; (2) that patch didn't survive a *different* commit message with
+  a bare `>` in prose → root-caused by switching to `shlex` tokenizing (D-005); (3) the
+  shlex fix's own commit message (built via `$(cat <<'EOF' ... EOF)`, containing literal
+  `"` characters) desynced shlex's quote-tracking since shlex doesn't model heredocs →
+  fixed by `strip_heredocs()`, which removes heredoc bodies before tokenizing (heredoc
+  bodies are never real shell syntax, so this is safe to drop unconditionally).
 
 ## Last Completed
-Rewrote Bash write-detection: `bash_write_targets()` tokenizes with `shlex`, splits on
-`&&`/`||`/`;`/`|`, exact-token match on `>`/`>>`, per-subcommand cp/mv/tee/touch/sed -i,
-ambiguous-write flag for git apply/checkout --/patch/rsync -a/npm|pip install.
-Unit-tested 16/16 (both real failing commit messages + real redirects + all other
-patterns) and end-to-end via stdin JSON. Not yet committed.
+Added `strip_heredocs()` to `track_changes.py`, applied before `shlex.split()`. Verified
+against all 3 real failures from this session plus 15 other cases (redirects, cp/mv/tee/
+touch/sed -i, ambiguous commands, a heredoc with a real redirect on its marker line) —
+18/18. Not yet committed.
 
 ## Next Action
-Commit + push. Update README "ข้อจำกัด v1.1" to describe the tokenizer, not the old
-regex list.
+Commit + push. Given the pattern above, watch the very next commit's own message for a
+recurrence before treating this as settled. Also update README "ข้อจำกัด v1.1" for the
+heredoc-stripping behavior.
