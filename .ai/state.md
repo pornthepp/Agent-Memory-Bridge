@@ -12,34 +12,41 @@ v1.1 change-detection hardening, now under its real name.
 - Guidance tells agents to commit `.ai/*.md` together with code (not hook-enforced).
 
 ## In Progress
-Bash write-detection has now been "fixed" 3 times in this session for the same class of
-bug (see Current Issues) — flagging that pattern explicitly rather than just claiming
-round 3 is the last one. Each fix was verified against every prior real failure, so
-regressions are covered, but a 4th unseen edge case can't be ruled out from testing
-alone. Not re-run against the scratch-folder clone since the heredoc fix; only unit- and
-stdin-tested directly.
+Bash write-detection was "fixed" 4 times this session for the same bug family (see
+Current Issues). Round 4 pushed as `4b2ccf3` and its OWN commit message immediately
+retriggered `.dirty` — confirmed the git-metadata-skip idea was needed, not just a
+smarter heredoc scan. This round adds two independent layers instead of one more
+single-point patch; not yet pushed, not re-run against the scratch-folder clone (only
+unit- and stdin-tested).
 
 ## Current Issues
 - Bash write-pattern detection is heuristic, not a real shell parser. Exotic constructs
-  (subshells, variable expansion, backticks) are still out of scope. README "ข้อจำกัด
-  v1.1" not yet updated for the heredoc-stripping change specifically.
+  (subshells, variable expansion, backticks) in *non-git* commands are still out of
+  scope. README "ข้อจำกัด v1.1" not yet updated for rounds 3-4.
 - Committing `.ai/*.md` with code is a documented convention only, not hook-enforced.
-- 3 real failures of the same bug class this session, each caused by the *previous*
-  fix's blind spot: (1) `->` arrow in a commit message read as redirect → fixed by
-  lookbehind exclusion; (2) that patch didn't survive a *different* commit message with
-  a bare `>` in prose → root-caused by switching to `shlex` tokenizing (D-005); (3) the
-  shlex fix's own commit message (built via `$(cat <<'EOF' ... EOF)`, containing literal
-  `"` characters) desynced shlex's quote-tracking since shlex doesn't model heredocs →
-  fixed by `strip_heredocs()`, which removes heredoc bodies before tokenizing (heredoc
-  bodies are never real shell syntax, so this is safe to drop unconditionally).
+- 4 real failures of the same bug family this session, each from the *previous* fix's
+  blind spot: (1) `->` arrow read as redirect; (2) bare `>` in prose read the same way
+  after (1)'s patch → root-caused via `shlex` tokenizing (D-005); (3) `strip_heredocs()`
+  (a quote-*unaware* regex scan) misfired because it doesn't know `<<'EOF'` appearing
+  *inside* a quoted `-m` string isn't a real heredoc → truncated the command and left a
+  stray `>` token; (4) **this round**: rewrote `strip_heredocs()` to track quote state
+  char-by-char (so `<<` only starts a heredoc when unquoted — matches real shell
+  grammar) AND stopped truncating when no terminator is found. Additionally added
+  `SAFE_GIT_SUBCOMMANDS` — `git status/log/diff/show/branch/tag/remote/config/blame/
+  reflog/fetch/add/commit/push` are skipped for write-scanning entirely, since none of
+  them rewrite project-file content as a side effect. This is deliberate defense in
+  depth: all 4 failures happened inside `git commit -m ...`, so even if some future text
+  pattern defeats the quote-aware scan, this class of command is never scanned at all.
 
 ## Last Completed
-Added `strip_heredocs()` to `track_changes.py`, applied before `shlex.split()`. Verified
-against all 3 real failures from this session plus 15 other cases (redirects, cp/mv/tee/
-touch/sed -i, ambiguous commands, a heredoc with a real redirect on its marker line) —
-18/18. Not yet committed.
+Rewrote `strip_heredocs()` to be quote-aware (single-pass, tracks `'`/`"` state,
+recognizes `<<` only when unquoted, no longer truncates on missing terminator). Added
+`SAFE_GIT_SUBCOMMANDS` skip. Verified 21/21 cases: all 4 real failures from this session
+(reconstructed from the exact commit text where possible) plus redirects, cp/mv/tee/
+touch/sed -i, ambiguous commands, heredocs with real redirects, and mixed git+real-write
+chains. Not yet committed.
 
 ## Next Action
-Commit + push. Given the pattern above, watch the very next commit's own message for a
-recurrence before treating this as settled. Also update README "ข้อจำกัด v1.1" for the
-heredoc-stripping behavior.
+Commit + push (plain `-m` this time, though it shouldn't matter anymore since `git
+commit` is now skipped entirely regardless of its message). Verify `.ai/.dirty` stays
+clear after that commit before calling this settled. Then update README "ข้อจำกัด v1.1".

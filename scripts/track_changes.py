@@ -8,54 +8,103 @@ from memory_common import project_root
 
 SEPARATORS = {"&&", "||", ";", "|"}
 
+# git subcommands that never rewrite arbitrary project-file content as a
+# side effect (they touch .git internals, the remote, or are read-only).
+# Skipped entirely for write-scanning — see strip_heredocs() docstring for
+# why "scan smarter" kept losing to commit messages that describe this very
+# bug in prose.
+SAFE_GIT_SUBCOMMANDS = {
+    "status", "log", "diff", "show", "branch", "tag", "remote", "config",
+    "blame", "reflog", "fetch", "add", "commit", "push",
+}
+
 HEREDOC_START_RE = re.compile(
     r"<<-?\s*(?:'([^']*)'|\"([^\"]*)\"|([A-Za-z_][A-Za-z0-9_]*))"
 )
 
 
 def strip_heredocs(command):
-    """Remove heredoc bodies (`<<'EOF' ... EOF`) before tokenizing.
+    """Remove real heredoc bodies (`<<'EOF' ... EOF`) before tokenizing.
 
-    shlex has no concept of heredocs — it just tracks bare quote characters.
-    A heredoc body (e.g. a multi-line commit message built via
-    `$(cat <<'EOF' ... EOF)`) commonly contains its own literal quote marks
-    ("like this"), which desyncs shlex's quote-tracking and can make
-    unrelated later text look like it's outside any quote. Heredoc bodies
-    are never real shell syntax, so drop them before scanning for anything.
+    Quote-aware on purpose: `<<` only starts a heredoc when it appears
+    outside any quote, exactly like real shell grammar. A first version of
+    this used a plain regex scan with no quote-tracking, so `<<'EOF'`
+    appearing as literal text *inside* a quoted -m argument (e.g. a commit
+    message describing this very bug) was wrongly treated as a real
+    heredoc start. That version also silently dropped the rest of the
+    command when no terminator line was found (common for such prose,
+    since there's no real closing delimiter) — fixed here by just leaving
+    unrecognized `<<` alone instead of truncating.
     """
     out = []
-    pos = 0
+    seg_start = 0
+    i = 0
+    n = len(command)
+    quote = None  # None, "'", or '"'
 
-    while True:
-        match = HEREDOC_START_RE.search(command, pos)
-        if not match:
-            out.append(command[pos:])
-            break
+    while i < n:
+        c = command[i]
 
-        delim = match.group(1) or match.group(2) or match.group(3)
-        line_end = command.find("\n", match.end())
+        if quote == "'":
+            if c == "'":
+                quote = None
+            i += 1
+            continue
 
-        if line_end == -1:
-            out.append(command[pos:])
-            break
+        if quote == '"':
+            if c == "\\" and i + 1 < n:
+                i += 2
+                continue
+            if c == '"':
+                quote = None
+            i += 1
+            continue
 
-        # Keep the heredoc marker's own line (it may carry real syntax,
-        # e.g. `cat <<EOF > out.txt`); drop everything from the body on.
-        out.append(command[pos:line_end + 1])
+        # Unquoted.
+        if c in ("'", '"'):
+            quote = c
+            i += 1
+            continue
 
-        terminator = re.compile(
-            r"^[ \t]*" + re.escape(delim) + r"[ \t]*$", re.MULTILINE
-        )
-        term_match = terminator.search(command, line_end + 1)
+        if c == "\\" and i + 1 < n:
+            i += 2
+            continue
 
-        if not term_match:
-            pos = len(command)
-            break
+        if command[i:i + 2] == "<<":
+            match = HEREDOC_START_RE.match(command, i)
+            if match:
+                delim = match.group(1) or match.group(2) or match.group(3)
+                line_end = command.find("\n", match.end())
 
-        pos = term_match.end()
-        if pos < len(command) and command[pos] == "\n":
-            pos += 1
+                if line_end != -1:
+                    terminator = re.compile(
+                        r"^[ \t]*" + re.escape(delim) + r"[ \t]*$",
+                        re.MULTILINE,
+                    )
+                    term_match = terminator.search(command, line_end + 1)
 
+                    if term_match:
+                        # Keep the marker's own line (may carry real syntax,
+                        # e.g. `cat <<EOF > out.txt`); drop the body only.
+                        out.append(command[seg_start:line_end + 1])
+                        pos = term_match.end()
+                        if pos < n and command[pos] == "\n":
+                            pos += 1
+                        seg_start = pos
+                        i = pos
+                        continue
+
+                # No real terminator line found: not a genuine heredoc body
+                # (likely prose mentioning `<<EOF`) — leave text untouched.
+                i = match.end()
+                continue
+
+            i += 1
+            continue
+
+        i += 1
+
+    out.append(command[seg_start:])
     return "".join(out)
 
 
@@ -89,12 +138,19 @@ def bash_write_targets(command):
         if not group:
             continue
 
+        head = group[0]
+        rest = group[1:]
+
+        if head == "git" and rest[:1] and rest[0] in SAFE_GIT_SUBCOMMANDS:
+            # Never rewrites project-file content; don't scan its args
+            # (typically a commit message) for write patterns at all —
+            # not even for a stray ">" token.
+            continue
+
         for i, tok in enumerate(group):
             if tok in (">", ">>") and i + 1 < len(group):
                 targets.append(group[i + 1])
 
-        head = group[0]
-        rest = group[1:]
         non_flags = [t for t in rest if not t.startswith("-")]
 
         if head in ("cp", "mv"):

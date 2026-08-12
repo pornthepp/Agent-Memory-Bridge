@@ -22,18 +22,22 @@ v1.1 change-detection hardening.
       drove SessionStart/PostToolUse/Stop/PreCompact hooks against it (2026-08-12)
 - [x] Found + fixed a severe bug: `session_start.py` crashed on Windows (`cp1252`
       stdout) whenever memory files had non-ASCII text — pushed as `a3859fd` (2026-08-12)
-- [x] Rewrote Bash write-detection around `shlex` tokenizing (D-005 supersedes D-003),
-      then found a 3rd real failure (heredoc content desyncs shlex quoting) and added
-      `strip_heredocs()` on top — 18/18 test cases pass (2026-08-12)
+- [x] Rewrote Bash write-detection around `shlex` tokenizing (D-005 supersedes D-003)
+      (2026-08-12)
+- [x] Round 3: added `strip_heredocs()`, pushed as `4b2ccf3` — then its own commit
+      message retriggered `.dirty` (2026-08-12)
+- [x] Round 4: made `strip_heredocs()` quote-aware + added `SAFE_GIT_SUBCOMMANDS` skip
+      (2 independent layers) — 21/21 test cases pass (2026-08-12)
 
 ## Current Tasks
-- [ ] Commit + push the heredoc-stripping fix (watch its own commit message for a
-      recurrence, given 2 of the 3 prior fixes broke on their own commit)
-- [ ] Update README.md "ข้อจำกัด v1.1" for heredoc-stripping specifically
+- [ ] Commit + push round 4; confirm `.ai/.dirty` stays clear afterward (verify, don't
+      assume — rounds 1 and 3 both broke on their own commit)
+- [ ] Update README.md "ข้อจำกัด v1.1" for rounds 3-4
 - [ ] Decide whether the git-commit-with-memory rule should stay convention-only or
       become hook-enforced
 - [ ] Clean up scratch test folder (user said they'd do it later)
 
 ## Next Milestone
-Push the fix and confirm (not just assume) it holds through its own commit + at least
-one more real session before calling Bash write-detection settled.
+Confirm round 4 holds through its own commit; if it does, this specific bug family can
+be considered closed (both quote-aware parsing and a structural skip for the recurring
+git-commit case are now in place).

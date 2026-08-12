@@ -34,9 +34,8 @@ write commands (`>`, `>>`, `cp`, `mv`, `tee`, `touch`, `sed -i`), with a broad d
 fallback for ambiguous write commands (`git apply`, `patch`, `rsync -a`, installs).
 
 **Reason:**
-User proposed telling the agent in CLAUDE.md/AGENTS.md to manually flag `.dirty` after
-Bash writes instead. Rejected per D-002: reintroduces dependence on the model
-remembering. Superseded by D-005 (regex proved unreliable).
+User proposed telling the agent in CLAUDE.md/AGENTS.md to flag `.dirty` manually
+instead. Rejected per D-002. Superseded by D-005 (regex proved unreliable).
 
 ---
 
@@ -49,8 +48,8 @@ Rename the project (was "AI Project Memory Universal") to **Agent Memory Bridge*
 GitHub remote already uses this name: `github.com/pornthepp/Agent-Memory-Bridge`.
 
 **Reason:**
-User picked it from suggested names; reflects what the tool actually does — bridges
-project memory across agents (Codex ↔ Claude Code) and across sessions.
+User picked it from suggested names; reflects the tool's function — bridges project
+memory across agents and sessions.
 
 ---
 
@@ -63,11 +62,15 @@ Detect Bash write targets by `shlex.split()`-tokenizing the command, not by rege
 the raw string.
 
 **Reason:**
-D-003's regex broke twice on real commit messages (`->` arrows, then bare `>` in prose) —
-both were text inside a quoted `-m` argument that regex can't tell from shell syntax.
+D-003's regex broke twice on real commit messages (`->` arrows, bare `>` in prose) —
+text inside a quoted `-m` argument that regex can't tell from shell syntax.
 
-**Update:** shlex alone wasn't enough either — a 3rd real failure hit almost
-immediately: a heredoc-built commit message (`$(cat <<'EOF' ... EOF)`) containing its
-own literal `"` characters desyncs shlex's quote-tracking (shlex has no concept of
-heredocs). Added `strip_heredocs()`: removes heredoc bodies before tokenizing, since
-they're never real shell syntax. Verified against all 3 real failures + 15 other cases.
+**Round 3:** shlex alone wasn't enough — a heredoc-built commit message desynced
+shlex's quote-tracking (shlex has no heredoc concept). Added `strip_heredocs()`, but as
+a quote-*unaware* regex scan it also misfired.
+
+**Round 4:** rewrote `strip_heredocs()` quote-aware (tracks `'`/`"`, only treats `<<` as
+a heredoc when unquoted, no longer truncates on missing terminator). Added
+`SAFE_GIT_SUBCOMMANDS`: skip scanning entirely for `status/log/diff/.../commit/push` —
+none rewrite project files, and all 4 failures happened inside one of them. Two
+independent layers now. 21/21 cases pass.
