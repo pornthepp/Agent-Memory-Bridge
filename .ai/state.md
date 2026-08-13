@@ -14,6 +14,15 @@ v1.1 change-detection hardening, now under its real name.
 ## In Progress
 None — see Next Action for the one pending step (commit + push this checkpoint).
 
+## Latest addition
+Manual checkpoint path shipped: `.ai/CHECKPOINT.md` (step-by-step runbook — plain
+markdown, works with ANY agent that can read a file, not just Claude Code/Codex) plus
+`.claude/commands/checkpoint.md` (`/checkpoint` shortcut, Claude Code only). README
+documents the one-line prompt for agents without a slash-command shortcut. User asked
+about opencode/Codex/Gemini CLI/Antigravity specifically — answered: the runbook itself
+is universal, but per-tool slash-command shortcuts (Gemini CLI's own format, etc.)
+haven't been researched/built yet — explicitly left open, not fabricated.
+
 ## Current Issues
 - Bash write-pattern detection is heuristic, not a real shell parser. Exotic constructs
   (subshells, variable expansion, backticks) in non-git commands are still out of scope.
@@ -26,13 +35,11 @@ None — see Next Action for the one pending step (commit + push this checkpoint
   auto-loads natively) now tells non-hook agents to read `.ai/*.md` themselves first.
 
 ## Last Completed
-Researched Antigravity hook support (WebSearch + WebFetch on antigravity.google/docs and
-independent blog posts) — confirmed no SessionStart/PreCompact hook exists there, and
-confirmed Antigravity does natively auto-load `AGENTS.md`. Fixed `AGENTS.md`'s opening
-line, which previously told agents to NOT rely on it to load memory (correct for
-Codex/Claude Code, actively wrong for Antigravity, which has nothing else to fall back
-on). Logged as D-006. Full Antigravity `hooks.json` integration explicitly deferred.
+Added `.ai/CHECKPOINT.md` (manual checkpoint runbook, universal across agents) and
+`.claude/commands/checkpoint.md` (`/checkpoint` shortcut, Claude Code only). README
+documents the manual-trigger prompt and the slash command. Trimmed `plan.md`'s
+milestone list (was approaching its 3500-char cap) to make room.
 
 ## Next Action
-Commit + push this checkpoint (`AGENTS.md` fallback fix, `.ai/decisions.md` D-006,
-this state/plan sync). Nothing else pending.
+Commit + push this checkpoint (`.ai/CHECKPOINT.md`, `.claude/commands/checkpoint.md`,
+`README.md`, this state/plan sync). Nothing else pending.

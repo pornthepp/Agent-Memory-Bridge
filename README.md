@@ -90,6 +90,21 @@ Claude Code รองรับ `startup`, `resume`, `clear`, `compact`, `fork`
 - หลัง Compact, SessionStart จะโหลด recovery กลับเข้า Context
 - Stop checkpoint จะบังคับ reconcile Memory ก่อนจบงาน
 
+### Manual checkpoint (ไม่ต้องรอ hook)
+
+สั่งบันทึกความจำเองได้ทุกเมื่อ ไม่ต้องรอจบ Turn — บอก agent ว่า:
+
+```text
+บันทึกความจำตอนนี้เลย ทำตามขั้นตอนใน .ai/CHECKPOINT.md
+```
+
+ไฟล์ `.ai/CHECKPOINT.md` เป็น runbook บอกขั้นตอนบันทึกแบบเป็นขั้นเป็นตอน (เช็คว่าเปลี่ยน
+อะไรไปบ้าง → อัพเดท state/plan → validate → commit) ใช้ได้กับ agent ไหนก็ได้ที่อ่านไฟล์
+ได้ — มีประโยชน์เป็นพิเศษกับ agent ที่ไม่มี Stop hook (เช่น Antigravity ดู "ข้อจำกัด v1.1")
+
+ถ้าใช้ Claude Code พิมพ์ `/checkpoint` ได้เลย (มี slash command ให้แล้วที่
+`.claude/commands/checkpoint.md`)
+
 ## ติดตั้งใน Project ใหม่
 
 1. แตกไฟล์ทั้งหมดลง **root ของ Project**
